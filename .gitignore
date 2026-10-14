@@ -1,0 +1,11 @@
+# Never commit secrets or premium exports
+.env
+.env.*
+!.env.example
+*.xlsx
+*.xls
+*.csv
+*.key
+*.pem
+node_modules/
+.DS_Store
