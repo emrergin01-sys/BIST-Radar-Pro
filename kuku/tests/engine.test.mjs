@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {analyzeCase} from '../engine.mjs';
+const base={symbol:'DEMO1',asOf:'2026-10-26',companyType:'nonfinancial',sources:[{url:'https://example.com/demo',publishedAt:'2026-10-22'}],financials:{period:'2026/6',pe:10,cfo:2,fcf:1,netDebtEbitda:1,salesGrowthPct:20},macro:{thesis:'Örnek'},sector:{name:'Örnek',thesis:'Örnek'}};
+test('6 araştırma rolü ve doğrulama uyarısı',()=>{const z=analyzeCase(base);assert.equal(z.roles.length,6);assert.equal(z.provenance.acceptedSources.length,1);assert.match(z.provenance.sourceVerification,/otomatik/);});
+test('gelecek bilgi analizde kullanılamaz',()=>{const z=analyzeCase({...base,sources:[{url:'https://example.com/new',publishedAt:'2026-10-27'}]});assert.equal(z.provenance.acceptedSources.length,0);assert.equal(z.provenance.rejectedSources.length,1);assert.match(z.decision,/Veri tamamla/);});
+test('banka için sanayi net borç / FAVÖK uyarısı yok',()=>{const z=analyzeCase({...base,companyType:'financial',financials:{...base.financials,netDebtEbitda:9}});assert.ok(z.roles[2].observations.some(x=>x.includes('Finans kuruluşu')));assert.equal(z.roles[2].concerns.some(x=>x.includes('3x')),false);});
+test('borç ve olumsuz nakit riske taşınır',()=>{const z=analyzeCase({...base,financials:{...base.financials,netDebtEbitda:4,fcf:-3}});assert.ok(z.roles[5].concerns.some(x=>x.includes('Net borç')));assert.match(z.decision,/Risk incele/);});
+test('yanlış tarih, sembol, companyType reddedilir',()=>{assert.throws(()=>analyzeCase({...base,asOf:'2026-02-31'}));assert.throws(()=>analyzeCase({...base,symbol:'invalid'}));assert.throws(()=>analyzeCase({...base,companyType:'bank-ish'}));});

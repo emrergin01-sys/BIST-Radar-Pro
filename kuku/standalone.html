@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KUKU • Araştırma Laboratuvarı</title>
+<style>
+:root{color-scheme:dark;--bg:#091222;--panel:#13243a;--line:#2b405d;--muted:#a6bbd4;--accent:#52dbac;--text:#eef5ff;--warn:#e7b567}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',sans-serif}header{background:#112039;border-bottom:1px solid var(--line);padding:22px 20px}header>div,main{max-width:1200px;margin:auto}h1{margin:0;font-size:25px}h1 span{color:var(--accent)}h2{font-size:20px;margin:0 0 16px}h3{font-size:16px;margin:0 0 10px}p,li{line-height:1.55}.muted{color:var(--muted)}.badge{font-size:12px;color:var(--accent);border:1px solid #346b62;border-radius:99px;padding:3px 10px;margin-left:10px}main{padding:24px 20px}.notice{border:1px solid #7f673e;background:#2b261e;color:#ffe6b2;padding:13px;border-radius:12px;margin-bottom:18px}.layout{display:grid;grid-template-columns:minmax(300px, 0.95fr) minmax(400px,1.35fr);gap:18px}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}.tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}button,.upload{background:#235a50;color:#f6ffff;border:1px solid #418a78;padding:11px 13px;border-radius:9px;cursor:pointer;font:inherit;font-weight:600}button.secondary,.upload{background:#1b334f;border-color:#405d80}button:hover,.upload:hover{filter:brightness(1.13)}.upload input{display:none}textarea{width:100%;min-height:510px;resize:vertical;background:#0b192b;color:#e6f5f4;border:1px solid #385375;border-radius:10px;padding:14px;font:13px/1.58 ui-monospace,SFMono-Regular,Consolas,monospace}.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:13px}.stat{background:#0d1c30;border:1px solid #314963;padding:13px;border-radius:10px}.stat .value{font-size:19px;font-weight:800;margin-top:4px}.label{font-size:12px;color:var(--muted)}.roles{display:grid;grid-template-columns:1fr;gap:10px}.role{border:1px solid var(--line);border-radius:10px;padding:15px;background:#102036}.role ul{margin:8px 0;padding-left:20px}.role li{font-size:14px}.role .risk{color:#f6bd91}.source{border-top:1px solid var(--line);padding:8px 0;font-size:13px;overflow-wrap:anywhere}a{color:#99d6fc}.message{color:#ffdca2;margin:8px 0}.empty{border:1px dashed #46617e;padding:30px;text-align:center;border-radius:12px;color:#b4c5d9}.small{font-size:12px}.footer{margin-top:26px;color:var(--muted);font-size:12px}.separator{margin:18px 0;border-top:1px solid var(--line)}@media(max-width:900px){.layout{grid-template-columns:1fr}textarea{min-height:340px}}@media(max-width:500px){main{padding:14px}header{padding:17px 14px}.summary{grid-template-columns:1fr}.card{padding:14px}}
+</style></head>
+<body><header><div><h1>KUKU <span>Research Lab</span> <span class="badge">v0.1 • Demo</span></h1><p class="muted" style="margin:5px 0 0">BIST Radar Pro • Kaynak, karşıt tez, şirket analizi ve olay çalışması</p></div></header>
+<main><div class="notice"><b>YALNIZCA ARAŞTIRMA DEMOSU.</b> Varsayılan veriler kurgusaldır. Canlı fiyat, otomatik KAP sorgusu, doğrulanmış sinyal veya alım-satım entegrasyonu bulunmaz. Bu sayfada girdi yalnız tarayıcında işlenir.</div>
+<div class="layout"><section class="card"><h2>Araştırma girdisi</h2><p class="muted small">Örnek JSON'u incele veya kendi dosyanı bilgisayarından seç. GitHub herkesin erişebildiği bir depo olduğundan özel portföyünü kod deposuna yükleme.</p>
+<div class="tools"><button id="demo">Örnek vaka</button><label class="upload">JSON dosyası aç<input id="file" type="file" accept=".json,application/json"></label><button id="run" class="secondary">Analiz et</button></div>
+<textarea id="case" spellcheck="false" aria-label="Araştırma verisi JSON"></textarea><p id="error" class="message" role="alert"></p><div class="separator"></div><h3>Geçmişe dönük sinyal olay çalışması</h3><p class="muted small">Varsayılan test, yalnızca kurgusal fiyatlar üzerinde hesaplanır; strateji veya portföy performansı değildir.</p><button id="study" class="secondary">Örnek olay çalışmasını çalıştır</button><div id="studyout" aria-live="polite"></div></section>
+<section class="card"><h2>Rol bazlı değerlendirme</h2><div id="result" class="empty">Veriyi analiz ettiğinde altı rolün bulguları burada görünecek.</div></section></div><p class="footer">Kaynak geçmişi ve gerçek işlemler için kişisel Google Drive'daki FİNANS ANA ARŞİV kullanılır. Hiçbir araştırma sonucu tek başına yatırım tavsiyesi değildir.</p>
+</main><script>
+/** KUKU research roles — deterministic screening, not financial advice.
+ *  Input values are never fetched, authenticated or price-verified by this module.
+ *  Pure functions so they can be tested independently of the interface.
+ */
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const own = (o,k)=>Object.prototype.hasOwnProperty.call(o||{},k);
+const finite = (v)=>typeof v==='number' && Number.isFinite(v);
+const fmt = (n, suffix='') => finite(n) ? `${n.toLocaleString('tr-TR',{maximumFractionDigits:2})}${suffix}` : 'veri yok';
+const isDate = s=>typeof s==='string' && ISO.test(s) && !Number.isNaN(Date.parse(s+'T00:00:00Z')) && new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
+const daysBetween=(a,b)=>Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/86400000);
+function role(name, observations=[], concerns=[], questions=[]){return {name,observations,concerns,questions};}
+function analyzeCase(c){
+  if (!c || typeof c !== 'object') throw new Error('Araştırma girdisi JSON nesnesi olmalı.');
+  if (!/^[A-Z0-9.\-]{2,15}$/.test(c.symbol||'')) throw new Error('Sembol: 2–15 büyük harf/rakam.');
+  if (!isDate(c.asOf)) throw new Error('asOf: YYYY-MM-DD tarihi zorunlu.');
+  if (!['nonfinancial','financial','holding'].includes(c.companyType)) throw new Error('companyType nonfinancial / financial / holding olmalı.');
+  if(!Array.isArray(c.sources)) throw new Error('sources dizisi zorunlu.');
+  const rejectedSources=[],acceptedSources=[];
+  for(const s of c.sources){
+    if (!s || !isDate(s.publishedAt) || !/^https:\/\/[^\s]+$/i.test(s.url||'')) {
+      rejectedSources.push({source:s,reason:'Geçerli HTTPS URL ve yayın tarihi zorunlu'});continue;
+    }
+    if(s.publishedAt>c.asOf){rejectedSources.push({source:s,reason:'Gelecek tarihli kaynak: ileriye bakma hatası'});continue;}
+    acceptedSources.push({title:String(s.title||s.url),url:s.url,publishedAt:s.publishedAt,daysOld:daysBetween(s.publishedAt,c.asOf),verified:false});
+  }
+  const f=c.financials||{},m=c.macro||{},sc=c.sector||{},t=c.technical||{},pf=c.portfolio||{};
+  const units=' (kullanıcı girişi; doğrulanmadı)';
+  const macro=role('Makroekonomi',[],[],[]);
+  if (finite(m.inflationPct)) macro.observations.push(`Türkiye enflasyon varsayımı: ${fmt(m.inflationPct,'%')}${units}`);
+  else macro.questions.push('Türkiye enflasyonu veya senaryo varsayımı nedir?');
+  if (finite(m.policyRatePct))macro.observations.push(`TCMB politika faizi varsayımı: ${fmt(m.policyRatePct,'%')}${units}`);
+  else macro.questions.push('Finansman maliyetini ve faizi tarihli resmî kaynaktan doğrula.');
+  if(typeof m.thesis==='string' && m.thesis.trim())macro.observations.push(`Makro tez: ${m.thesis.trim()}`);
+  else macro.questions.push('Makro tezi ve dünya büyümesi riskleri nasıl değişiyor?');
+  if(finite(m.inflationPct)&&finite(m.policyRatePct))macro.observations.push(`Basit politika faizi - enflasyon farkı: ${fmt(m.policyRatePct-m.inflationPct,' puan')} (gerçek ex-ante reel faiz değildir)`);
+  const sector=role('Sektör ve rekabet',[],[],[]);
+  if(sc.name)sector.observations.push(`Sektör: ${sc.name}`); else sector.questions.push('Şirketin doğru sektör/alt sektörü?');
+  if(sc.thesis)sector.observations.push(`Yapısal büyüme tezi: ${sc.thesis}`);else sector.questions.push('Talep artışı sipariş ve nakit kazanca dönüşüyor mu?');
+  if(sc.risk)sector.concerns.push(`Sektörel karşı tez: ${sc.risk}`);
+  const fundamental=role('Bilanço ve nakit',[],[],[]);
+  const valuation=role('Değerleme ve fırsat maliyeti',[],[],[]);
+  if(f.period)fundamental.observations.push(`Finansal dönem: ${f.period}`);else fundamental.questions.push('İlgili raporlama dönemini (örn. 2026/6) belirt.');
+  if(c.companyType==='financial'){
+    fundamental.observations.push('Finans kuruluşu: sanayi şirketi FAVÖK/net borç filtresi uygulanmaz.');
+    fundamental.questions.push('Sermaye yeterliliği, aktif kalitesi, likidite ve sektöre özgü kârlılığı ayrıca kontrol et.');
+  }else if(c.companyType==='holding'){
+    fundamental.observations.push('Holding: iştiraklerin net aktif değeri ve holding iskontosu ayrıca hesaplanmalı.');
+    fundamental.questions.push('İştirak değerlemeleri ve holding borçluluğu ayrıştırıldı mı?');
+  }else{
+    if(finite(f.netDebtEbitda)){
+      fundamental.observations.push(`Net borç/FAVÖK: ${fmt(f.netDebtEbitda,'x')}`);
+      if(f.netDebtEbitda>3)fundamental.concerns.push('Net borç/FAVÖK 3x üzerinde; finansman riski ayrı stres testini gerektirir.');
+    }else fundamental.questions.push('Net borç/FAVÖK ve vade yapısı eksik.');
+  }
+  if(finite(f.cfo)&&finite(f.fcf)){
+    fundamental.observations.push(`Faaliyet nakdi: ${fmt(f.cfo)}; serbest nakit: ${fmt(f.fcf)} (aynı raporlama birimi varsayıldı)`);
+    if(f.cfo<=0)fundamental.concerns.push('Faaliyet nakit akışı pozitif değil.');
+    if(f.fcf<0)fundamental.concerns.push('Serbest nakit akışı negatif; tanımı ve yatırım harcamaları kontrol edilmeli.');
+    if(f.cfo>0&&f.fcf>0)fundamental.observations.push('İki nakit akışı göstergesi pozitif; sürdürülebilirlik ve tanım yine teyit edilmeli.');
+  } else fundamental.questions.push('Faaliyet nakdi ve sermaye harcaması ayrımı eksik.');
+  if(finite(f.salesGrowthPct)){
+    fundamental.observations.push(`Satış büyümesi: ${fmt(f.salesGrowthPct,'%')}`);
+    if(f.salesGrowthPct<0)fundamental.concerns.push('Satış büyümesi negatif; fiyat/enflasyon ve hacim ayrıştırılmalı.');
+  }else fundamental.questions.push('Nominal ve reel satış büyümesi eksik.');
+  if(finite(f.roicPct))fundamental.observations.push(`ROIC: ${fmt(f.roicPct,'%')}`);
+  else fundamental.questions.push('ROIC / sektör için uygun sermaye getirisi eksik.');
+  if(finite(f.pe)&&f.pe>0)valuation.observations.push(`F/K: ${fmt(f.pe,'x')}; tek başına ucuzluk sinyali değildir.`);
+  else valuation.questions.push('Karın sürdürülebilirliği ve geçerli F/K yok.');
+  if(finite(f.pb)&&f.pb>0)valuation.observations.push(`PD/DD: ${fmt(f.pb,'x')}`);
+  if(finite(f.evEbitda)&&f.evEbitda>0&&c.companyType==='nonfinancial')valuation.observations.push(`FD/FAVÖK: ${fmt(f.evEbitda,'x')}`);
+  valuation.questions.push('Tarihsel çarpan, benzer şirketler, ileri dönem tahmini ve güvenlik marjı karşılaştırılmalı.');
+  const technical=role('Fiyat, hacim ve takas',[],[],[]);
+  if(finite(t.return3mPct)){
+    technical.observations.push(`Son 3 ay getiri: ${fmt(t.return3mPct,'%')} (kaynak veri dönemi kontrol edilmeli)`);
+    if(t.return3mPct<=-25)technical.concerns.push('Üç aylık büyük düşüş; hacim, likidite ve olası şirket olayı incelenmeli.');
+  } else technical.questions.push('Tarihli fiyat ve hacim serisi eksik.');
+  if(t.takasNote)technical.observations.push(`Takas gözlemi: ${String(t.takasNote)} — kurum saklaması gerçek yatırımcıyı kesin göstermez.`);
+  else technical.questions.push('Takas lisansı yoksa yalnız mevcut doğrulanabilen fiyat/hacim analiz edilir.');
+  const risk=role('Karşıt tez ve portföy',[],[],[]);
+  if(pf.existingSectorExposure)risk.observations.push(`Mevcut portföyde benzer maruziyet: ${String(pf.existingSectorExposure)}`);
+  else risk.questions.push('Portföyün sektör/fon ortak pozisyonları ve güncel ağırlıkları eksik.');
+  risk.concerns.push(...fundamental.concerns,...technical.concerns);
+  if(sc.risk)risk.concerns.push(`Sektör karşı senaryosu: ${sc.risk}`);
+  if(c.counterThesis)risk.concerns.push(`Analistin yazdığı karşı tez: ${c.counterThesis}`);
+  else risk.questions.push('Olumsuz senaryonun birincil kaynağı ve tez bozucu tetikleyicisi nedir?');
+  if(rejectedSources.length)risk.concerns.push(`${rejectedSources.length} kaynak tarihi veya bağlantısı nedeniyle değerlendirme dışında bırakıldı.`);
+  if(!acceptedSources.length)risk.concerns.push('Karar tarihine uygun ve formatça geçerli tarihli birincil kaynak sağlanmadı.');
+  if(acceptedSources.some(s=>s.daysOld>365))risk.concerns.push('En az bir kaynak bir yıldan eski; yeni raporla kontrol et.');
+  const evidencePoints=[!!f.period,finite(f.cfo),finite(f.fcf),finite(f.salesGrowthPct),finite(f.pe)||finite(f.pb),!!sc.name,!!sc.thesis,!!m.thesis,acceptedSources.length>0];
+  const coverage=Number((evidencePoints.filter(Boolean).length/evidencePoints.length*100).toFixed(0));
+  let decision='Araştırma bekliyor';
+  if(!acceptedSources.length||coverage<55)decision='Veri tamamla — işlem kararı üretme';
+  else if(risk.concerns.some(x=>/net borç|pozitif değil|negatif|büyük düşüş/i.test(x))) decision='Risk incele — azalt/çık senaryosunu karşılaştır';
+  else decision='İzle — alternatifleri ve değerlemeyi karşılaştır';
+  return {
+    symbol:c.symbol,asOf:c.asOf,companyType:c.companyType,
+    provenance:{acceptedSources,rejectedSources,sourceVerification:'Bağlantılar biçimsel ve tarihsel kontrolden geçti; içerik dış kaynakla otomatik karşılaştırılmadı.'},
+    coveragePct:coverage,decision,roles:[macro,sector,fundamental,valuation,technical,risk],
+    nextSteps:[...new Set([...macro.questions,...sector.questions,...fundamental.questions,...valuation.questions,...technical.questions,...risk.questions])],
+    warnings:['Bu rapor bağımsız rol bazlı kontrol listesi; gerçek çoklu LLM-ajan sistemi değildir.','Hisse fiyatı ve tüm girdi değerleri dış kaynaklardan otomatik doğrulanmaz.','Yatırım emri/satış işlemi yapılmaz; yatırım kararı kullanıcıya aittir.']
+  };
+}
+
+/** Educational, deterministic signal event study — NOT a portfolio backtest.
+ * One bar execution delay; point-in-time information cutoff; explicit fees/slippage.
+ * Bars/signal arrays must be real, dated, licensed/appropriately used data.
+ */
+const iso = /^\d{4}-\d{2}-\d{2}$/;
+function date(d){return typeof d==='string'&&iso.test(d)&&!Number.isNaN(Date.parse(d+'T00:00:00Z'))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;}
+function numeric(v){return typeof v==='number'&&Number.isFinite(v);}
+function eventStudy({bars,signals,holdBars=5,feeBps=10,slippageBps=5,benchmarkSymbol='XU100'}){
+ if(!Array.isArray(bars)||!Array.isArray(signals))throw Error('bars ve signals dizileri gerekli.');
+ if(!Number.isInteger(holdBars)||holdBars<1||holdBars>250)throw Error('holdBars 1–250 arasında tam sayı.');
+ for(const [k,v] of Object.entries({feeBps,slippageBps}))if(!numeric(v)||v<0||v>1000)throw Error(`${k}: geçersiz.`);
+ const group=new Map();
+ for(const b of bars){if(!b||!date(b.date)||!numeric(b.close)||b.close<=0||typeof b.symbol!=='string')throw Error('Hatalı bar: tarih, sembol, pozitif kapanış gerekli.');
+  if(!group.has(b.symbol))group.set(b.symbol,[]);group.get(b.symbol).push(b);
+ }
+ for(const [k,list] of group){list.sort((a,b)=>a.date.localeCompare(b.date));for(let i=1;i<list.length;i++)if(list[i].date===list[i-1].date)throw Error(`${k}: yinelenen tarih ${list[i].date}`);}
+ const records=[],excluded=[];
+ for(const s of signals){
+  if(!s||!date(s.date)||typeof s.symbol!=='string'||!date(s.dataAvailableAt))throw Error('Sinyal: date, symbol, dataAvailableAt zorunludur.');
+  if(s.dataAvailableAt>s.date){excluded.push({signal:s,reason:'İleriye bakma: bilgi karar gününde mevcut değildi.'});continue;}
+  const rows=group.get(s.symbol)||[];const entryIndex=rows.findIndex(b=>b.date>s.date);
+  if(entryIndex<0 || entryIndex+holdBars>=rows.length){excluded.push({signal:s,reason:'İşlem sonrası yeterli gözlem yok.'});continue;}
+  const entry=rows[entryIndex], exit=rows[entryIndex+holdBars];
+  const buy=entry.close*(1+slippageBps/10000),sell=exit.close*(1-slippageBps/10000);
+  const returnPct=(((sell*(1-feeBps/10000))/(buy*(1+feeBps/10000)))-1)*100;
+  let benchmarkPct=null;
+  const benchmark=group.get(benchmarkSymbol)||[];
+  const bi=benchmark.find(b=>b.date===entry.date),bo=benchmark.find(b=>b.date===exit.date);
+  if(bi&&bo)benchmarkPct=((bo.close/bi.close)-1)*100;
+  records.push({symbol:s.symbol,signalDate:s.date,enteredAt:entry.date,exitedAt:exit.date,entryClose:entry.close,exitClose:exit.close,netReturnPct:Number(returnPct.toFixed(4)),benchmarkReturnPct:benchmarkPct===null?null:Number(benchmarkPct.toFixed(4))});
+ }
+ const avg=k=>records.length?Number((records.reduce((a,r)=>a+r[k],0)/records.length).toFixed(3)):null;
+ return {method:'Sinyal olay çalışması. Sermaye/pozisyon büyüklüğü, çakışan işlemler ve portföy riskleri hesaplanmaz.',holdBars,feeBps,slippageBps,usedSignals:records.length,excluded,meanNetReturnPct:avg('netReturnPct'),winRatePct:records.length?Number((100*records.filter(r=>r.netReturnPct>0).length/records.length).toFixed(2)):null,records};
+}
+
+const $=id=>document.getElementById(id);const simple=(tag,txt,cls)=>{const e=document.createElement(tag);if(txt!==undefined)e.textContent=txt;if(cls)e.className=cls;return e};
+const SAMPLE={symbol:'DEMO1',asOf:'2026-10-26',companyType:'nonfinancial',sources:[{title:'Tamamen kurgusal kaynak',url:'https://example.com/synthetic',publishedAt:'2026-10-22'}],financials:{period:'2026/6',pe:11.2,pb:1.8,evEbitda:8.1,roicPct:17.5,cfo:250,fcf:-40,netDebtEbitda:3.4,salesGrowthPct:21},macro:{policyRatePct:35,inflationPct:31,thesis:'Kurgusal: faiz finansman maliyetini etkiler'},sector:{name:'Örnek ekipman',thesis:'Kurgusal: ekipman talebi',risk:'Yatırımlar gecikebilir'},technical:{return3mPct:-32},portfolio:{existingSectorExposure:'Kurgusal: 2 benzer pozisyon'},counterThesis:'Satışlar nakde dönüşmeyebilir'};
+const SAMPLE_STUDY={holdBars:2,feeBps:10,slippageBps:5,bars:[{symbol:'DEMO1',date:'2026-10-19',close:100},{symbol:'DEMO1',date:'2026-10-20',close:101},{symbol:'DEMO1',date:'2026-10-21',close:102},{symbol:'DEMO1',date:'2026-10-22',close:105},{symbol:'DEMO1',date:'2026-10-23',close:103}],signals:[{symbol:'DEMO1',date:'2026-10-20',dataAvailableAt:'2026-10-19'},{symbol:'DEMO1',date:'2026-10-20',dataAvailableAt:'2026-10-22'}]};
+const sample=()=>{$('case').value=JSON.stringify(SAMPLE,null,2);$('error').textContent='';};
+function ul(items,css){if(!items.length)return null;const l=simple('ul');items.forEach(x=>l.append(simple('li',x,css)));return l}
+function section(target,title,items,css){if(!items?.length)return;target.append(simple('h3',title));target.append(ul(items,css))}
+function render(){try{const z=analyzeCase(JSON.parse($('case').value));$('error').textContent='';const box=$('result');box.className='';box.replaceChildren();const sum=simple('div',undefined,'summary');for(const [label,value] of [['Kod / karar günü',z.symbol+' / '+z.asOf],['Kanıt kapsamı',z.coveragePct+'%'],['Araştırma durumu',z.decision],['Geçerli bağlantı',String(z.provenance.acceptedSources.length)]]){const card=simple('div',undefined,'stat');card.append(simple('div',label,'label'),simple('div',value,'value'));sum.append(card)}box.append(sum);const roles=simple('div',undefined,'roles');for(const r of z.roles){const div=simple('article',undefined,'role');div.append(simple('h3',r.name));section(div,'Bulgular',r.observations);section(div,'Risk / karşı görüş',r.concerns,'risk');section(div,'Doğrulanacaklar',r.questions);roles.append(div)}box.append(roles);const sourceBox=simple('div',undefined,'separator');box.append(sourceBox,simple('h3','Kaynak denetimi'),simple('p',z.provenance.sourceVerification,'small muted'));for(const s of z.provenance.acceptedSources){const row=simple('div',undefined,'source');const a=simple('a',s.title);a.href=s.url;a.target='_blank';a.rel='noopener noreferrer';row.append(a,simple('span',` — ${s.publishedAt} • ${s.daysOld} gün önce`));box.append(row);}for(const s of z.provenance.rejectedSources)box.append(simple('p',`Dışlanan kaynak: ${s.reason}`,'message'));box.append(simple('p',z.warnings.join(' '),'small muted'));}catch(err){$('error').textContent='Analiz hatası: '+err.message;}}
+$('demo').addEventListener('click',()=>{sample();render();});$('run').addEventListener('click',render);
+$('file').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>1e6){$('error').textContent='1 MB üstü dosya desteklenmiyor.';return;}try{$('case').value=await f.text();render();}catch(e){$('error').textContent=e.message;}finally{e.target.value='';}});
+$('study').addEventListener('click',()=>{const z=eventStudy(SAMPLE_STUDY);const b=$('studyout');b.replaceChildren();b.append(simple('p',`Geçerli işlem: ${z.usedSignals}; dışlanan: ${z.excluded.length}; ortalama masraf sonrası getiri: ${z.meanNetReturnPct}%`),simple('p',`Giriş ${z.records[0]?.enteredAt}, çıkış ${z.records[0]?.exitedAt}. Bu bir portföy testi değildir.`,'small muted'));});sample();render();
+</script></body></html>
