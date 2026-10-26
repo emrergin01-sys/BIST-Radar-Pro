@@ -33,3 +33,21 @@ Bu modül **portföy backtest'i değildir**: sermaye tahsisi, pozisyon çakışm
 4. v0.4: onaylı veri bağlantılarıyla ayrı analist ajanları, kaynak dışlama ve karşıt tez hakemi. Otomatik al/sat yok.
 
 Metodoloji: `kuku/prompts/role-playbook.md`.
+
+## v0.2 — Veri Merkezi (26.10.2026)
+
+Yeni kaynak-kontrollü CSV ithal ve karşılaştırma katmanı `kuku/datahub/` içindedir.
+
+- **Çevrimdışı arayüz:** `kuku/datahub/standalone.html` (dosyayı çift tıklayarak aç). Özel CSV tarayıcıda kalır; GitHub'a gönderilmez.
+- **Veri işleme:** `snapshots.mjs` Fintables tarzı `Sembol` ve `Şirket` sütunlarını tanır, metrik adlarını ortak standarda çevirir; `%20,09` ile `0,2009` gibi sayısal ölçekleri dosya düzeyinde normalleştirir ve belirsizlikte uyarır. As-of ve veri dönemi kontrolleri yapar.
+- **Kanıt kontrolü:** `evidence.mjs` tarih, kayıt ve kaynak bağlantısı biçimini ve bilgilerin analiz tarihinde var olup olmadığını inceler; bağlantıların içeriğini **doğruladığını iddia etmez**.
+- **Komut satırı:** `node kuku/datahub/cli.mjs import eski.csv meta.json eski.json`; `node kuku/datahub/cli.mjs compare eski.json yeni.json pe rapor.json`; `node kuku/datahub/cli.mjs evidence evidence.json 2026-10-26 kabul.json`.
+- **Kaynak yönetimi:** KAP resmî kurumsal Veri Yayın Servisi, Borsa İstanbul sözleşmesi + MKK yetkilendirmesi + IP/API anahtarı gerektirir. Bu sürüm izinsiz API scraping ya da sürekli sorgulama yapmaz. Kaynak: https://www.kap.org.tr/tr/api/about/content-file/8a019492945fbe080194b26d8bed4873 . Kamu KAP arayüzündeki erişilebilir bilgiyi kullanıcı/araştırmacı web üzerinden kontrol edip bu formata tarihli aktarabilir.
+- **Fonlar:** TEFAS/SPK'nin resmî fon arayüzü kullanılarak indirilen izinli dosyalar ileride ayrıca fon şemasıyla işlenecek; bu sürüm fon pay/fiyatını otomatik çekmez. https://spk.gov.tr/kurumlar/fonlar/yatirim-fonlari/menkul-kiymet-yatirim-fonlari/portfoy-degerleri
+
+**Kritik keşif:** 17.10.2026 Fintables kârlılık yüzdelerinin bir kısmı örneğin 20,09, 25.10.2026 dosyasında 0,2009 şeklindedir. Normalize etmeden 99% düşüş çıkarımı HATALIDIR. 26.10.2026 tarihli gerçek dosya incelemesindeki sayı özeti özel Drive araştırma günlüğündedir; kamu GitHub deposunda lisanslı veri tutulmaz.
+
+Testler: `node --test kuku/tests/*.test.mjs`. `datahub` modülü, otomatik KAP/TEFAS bağlantısı, işlem veya fon portföy hesaplaması değildir; kaynaklı veri kaydetme/karşılaştırma temelidir.
+
+### v0.2 hızlı erişim
+`kuku/datahub/standalone.html` çevrimdışı iki Fintables CSV görüntüsünü karşılaştırır; ayrıntılı açıklama `kuku/datahub/README.md`. İlk gerçek arşiv karşılaştırması kamuya açık depoda değil, kullanıcının özel Google Drive kütüphanesinde tutulur.
