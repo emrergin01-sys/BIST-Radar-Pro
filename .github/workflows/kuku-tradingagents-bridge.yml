@@ -1,0 +1,24 @@
+name: KUKU TradingAgents bridge checks
+on:
+  pull_request:
+    paths:
+      - "kuku/tradingagents_bridge/**"
+      - ".github/workflows/kuku-tradingagents-bridge.yml"
+  push:
+    paths:
+      - "kuku/tradingagents_bridge/**"
+  workflow_dispatch:
+jobs:
+  offline-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Test BIST ticker parsing and output safety (NO model account)
+        run: python -m unittest discover -s kuku/tradingagents_bridge/tests -v
+      - name: Verify script compiles
+        run: python -m py_compile kuku/tradingagents_bridge/run.py
+# Real TradingAgents model runs MUST be launched only on a user-authorized
+# private machine. Do not upload ChatGPT auth tokens or private Fintables data.
