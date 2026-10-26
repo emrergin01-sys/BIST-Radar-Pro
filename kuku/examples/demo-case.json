@@ -1,0 +1,12 @@
+{
+  "symbol": "DEMO1",
+  "asOf": "2026-10-26",
+  "companyType": "nonfinancial",
+  "sources": [{"title":"Tamamen kurgusal veri sayfası (örnek)", "url":"https://example.com/synthetic", "publishedAt":"2026-10-22"}],
+  "financials": {"period":"2026/6", "pe":11.2, "pb":1.8, "evEbitda":8.1, "roicPct":17.5, "cfo":250, "fcf":-40, "netDebtEbitda":3.4, "salesGrowthPct":21.0},
+  "macro": {"policyRatePct":35.0, "inflationPct":31.0, "thesis":"Kurgusal: faiz finansman maliyetini etkiliyor"},
+  "sector": {"name":"Örnek ekipman sektörü", "thesis":"Kurgusal: talep büyüme beklentisi", "risk":"Daha zayıf yatırım harcamaları"},
+  "technical": {"return3mPct":-32.0},
+  "portfolio": {"existingSectorExposure":"Kurgusal: aynı sektörde iki pozisyon"},
+  "counterThesis": "Satışlar nakde dönüşmeyebilir"
+}

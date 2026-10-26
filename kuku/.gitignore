@@ -1,0 +1,11 @@
+# User financial records and premium data must never enter public repository
+.env
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.zip
+portfolio*
+secrets*
+private*
+node_modules/

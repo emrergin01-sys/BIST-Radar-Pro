@@ -1,0 +1,21 @@
+{
+  "holdBars": 2,
+  "feeBps": 10,
+  "slippageBps": 5,
+  "benchmarkSymbol": "XU100",
+  "bars": [
+    {"symbol":"DEMO1","date":"2026-10-19","close":100},
+    {"symbol":"DEMO1","date":"2026-10-20","close":101},
+    {"symbol":"DEMO1","date":"2026-10-21","close":102},
+    {"symbol":"DEMO1","date":"2026-10-22","close":105},
+    {"symbol":"DEMO1","date":"2026-10-23","close":103},
+    {"symbol":"XU100","date":"2026-10-20","close":1000},
+    {"symbol":"XU100","date":"2026-10-21","close":1004},
+    {"symbol":"XU100","date":"2026-10-22","close":1011},
+    {"symbol":"XU100","date":"2026-10-23","close":1012}
+  ],
+  "signals": [
+    {"symbol":"DEMO1","date":"2026-10-20","dataAvailableAt":"2026-10-19"},
+    {"symbol":"DEMO1","date":"2026-10-20","dataAvailableAt":"2026-10-22"}
+  ]
+}
