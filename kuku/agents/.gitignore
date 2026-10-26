@@ -1,0 +1,5 @@
+.env
+*.private.json
+private/
+*.local.json
+OPENAI_API_KEY
