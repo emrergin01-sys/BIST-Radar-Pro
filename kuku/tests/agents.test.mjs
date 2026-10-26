@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {orchestrateCase,validateCase,validateReport,mockAgent} from '../agents/orchestrator.mjs';
+import {ROLES} from '../agents/roles.mjs';
+const base=JSON.parse(readFileSync(new URL('../examples/v03-synthetic-case.json',import.meta.url),'utf8'));
+const report={summary:'Veri sınırlı',findings:[],risks:[],questions:[],evidenceIds:[],stance:'insufficient',recommendation:'not_applicable'};
+test('altı rolün sırası (4 paralel, karşı tez, portföy)',async()=>{const x=await orchestrateCase(base);assert.deepEqual(x.timeline.map(o=>o.role),ROLES.map(o=>o.id));assert.equal(x.mode,'demo');assert.equal(x.decision,'insufficient_evidence');});
+test('gelecekteki kaynak reddedilir',()=>{assert.throws(()=>validateCase({...base,sources:[{...base.sources[0],publishedAt:'2026-10-27'}]}),/Gelecek/)});
+test('aynı kaynak ID tekrar edemez',()=>{assert.throws(()=>validateCase({...base,sources:[base.sources[0],base.sources[0]]}),/tekrarlı/)});
+test('model uydurma kaynak ID gösteremez',()=>{assert.throws(()=>validateReport({...report,evidenceIds:['FAKE_001']},'macro',new Set(['SYNTH_001'])),/kaynak dışı/)});
+test('karşı tez analisti işlem öneremez',()=>{assert.throws(()=>validateReport({...report,recommendation:'exit_candidate'},'skeptic',new Set()),/işlem yönü/)});
+test('kaynak olmadan alım-satım görüşü kabul edilmez',()=>{assert.throws(()=>validateReport({...report,recommendation:'consider_reduce'},'portfolio',new Set()),/Kaynak gösterilmeden/)});
+test('live modda kontrol edilmemiş tek kaynak yetmez',async()=>{await assert.rejects(()=>orchestrateCase(base,{mode:'live'}),/insan tarafından/)});
+test('live modda incelenmiş kaynakla çalıştırıcı 6 rol çağrılır',async()=>{let calls=0;const c={...base,sources:[{...base.sources[0],reviewStatus:'human-reviewed'}]};const z=await orchestrateCase(c,{mode:'live',runAgent:async(r,p)=>{calls++;return mockAgent(r,p)}});assert.equal(calls,6);assert.equal(z.reviewedSourceCount,1);});
+test('ajan hatası son karara dönüşmeden durur',async()=>{await assert.rejects(()=>orchestrateCase(base,{runAgent:async()=>({hello:'foo'})}),/beklenmedik|eksik/)});
+test('ilk dört analistin çıktıları sonraki rollere aktarılır',async()=>{const seen=[];await orchestrateCase(base,{runAgent:async(r,p)=>{seen.push([r.id,Object.keys(p.prior)]);return mockAgent(r,p)}});assert.equal(seen.find(x=>x[0]==='skeptic')[1].length,4);assert.equal(seen.find(x=>x[0]==='portfolio')[1].length,5);});
+test('vaka girdisi değişmez ve özel portföy dışarıdan okunmaz',async()=>{const c=structuredClone(base);await orchestrateCase(c);assert.deepEqual(c,base)});

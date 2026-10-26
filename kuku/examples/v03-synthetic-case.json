@@ -1,0 +1,7 @@
+{
+ "symbol":"DEMO1","asOf":"2026-10-26","companyType":"nonfinancial",
+ "sources":[{"id":"SYNTH_001","url":"https://example.com/synthetic-financials","publishedAt":"2026-10-22","claim":"TAMAMEN KURGUSAL bilanço özeti, yatırım amaçlı kullanılamaz.","reviewStatus":"unchecked"}],
+ "financials":{"period":"2026/6","pe":10,"cfo":100,"netDebt":250},
+ "macro":{"scenario":"Kurgusal talep artışı"},"sector":{"name":"Kurgusal sektör"},
+ "portfolio":{"note":"Gerçek kişisel portföy içermez"}
+}
